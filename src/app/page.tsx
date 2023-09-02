@@ -5,7 +5,6 @@ import styles from "../app/page.module.css";
 import { useState } from "react";
 import { parseUnits, zeroAddress } from "viem";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import Link from "next/link";
 import {
   useWalletClient,
   useAccount,
@@ -29,6 +28,17 @@ import {
 import { getPaymentNetworkExtension } from "@requestnetwork/payment-detection";
 import { useProvider } from "../hooks/useProvider";
 import { useSigner } from "../hooks/useSigner";
+import {
+  Box,
+  Button,
+  Center,
+  HStack,
+  Heading,
+  Input,
+  Select,
+  SimpleGrid,
+  VStack,
+} from "@chakra-ui/react";
 
 enum APP_STATUS {
   AWAITING_INPUT = "awaiting input",
@@ -293,238 +303,169 @@ export default function Home() {
   }
 
   return (
-    <div>
-      <h3>Pay a request</h3>
-      <ul>
-        <li>
-          &#8226; This demo creates and pays an unencrypted ERC20 request.
-        </li>
-        <li>
-          &#8226; The code is intentionally simple with minimal dependencies.
-        </li>
-        <li>&#8226; Input fields annotated with a * are required.</li>
-      </ul>
-      <br></br>
-      <h4>Create a request</h4>
-      <form onSubmit={handleSubmit}>
-        <label>Payee Identity*</label>
-        <ConnectButton chainStatus="none" showBalance={false} />
-        <p className={styles.text_sm}>
-          The identity address of the Payee. Creating a request requires a
-          signature from either the Payee Identity or Payer Identity. This demo
-          only supports signing with the Payee Identity. {styles.w_96}
-        </p>
-        <br></br>
-        <label>
-          Storage Chain *
-          <div>
-            <select
-              name="storage-chain"
-              onChange={(e) => setStorageChain(e.target.value)}
-              defaultValue={storageChain}
-              className={styles.h9_w96}
+    <SimpleGrid columns={2} spacing={10} p={"50px"}>
+      <Box
+        background={"white"}
+        borderWidth={"1px"}
+        borderRadius={"20px"}
+        borderColor={"gray.400"}
+        shadow={"md"}
+        p={"30px"}
+      >
+        <Center mb={"30px"} color={"gray.700"}>
+          <Heading>NFT Designer</Heading>
+        </Center>
+        <form onSubmit={handleSubmit}>
+          <VStack spacing={"20px"} alignItems={"start"}>
+            <ConnectButton chainStatus="none" showBalance={false} />
+            <Box>
+              <Box>Storage Chain *</Box>
+              <Select
+                name="storage-chain"
+                onChange={(e) => setStorageChain(e.target.value)}
+                defaultValue={storageChain}
+                className={styles.h9_w96}
+              >
+                {Array.from(storageChains.entries()).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value.name} ({value.type})
+                  </option>
+                ))}
+              </Select>
+            </Box>
+            <Box>
+              <Box>Amount *</Box>
+              <Input
+                type="number"
+                name="expected-amount"
+                step="any"
+                onChange={(e) => setExpectedAmount(e.target.value)}
+                className={styles.h9_w96}
+              />
+            </Box>
+            <Box>
+              <Box>Currency *</Box>
+              <Select
+                name="currency"
+                onChange={(e) => setCurrency(e.target.value)}
+                defaultValue={currency}
+                className={styles.h9_w96}
+              >
+                {Array.from(currencies.entries()).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value.symbol} ({value.network})
+                  </option>
+                ))}
+              </Select>
+            </Box>
+            <Box>
+              <Box>Payment Recipient</Box>
+              <Input
+                type="text"
+                name="payment-recipient"
+                placeholder={address}
+                onChange={(e) => setPaymentRecipient(e.target.value)}
+                className={styles.h9_w96}
+              />
+            </Box>
+            <Box>
+              <Box>Payer Identity</Box>
+              <Input
+                type="text"
+                name="payer-identity"
+                placeholder="0x..."
+                onChange={(e) => setPayerIdentity(e.target.value)}
+                className={styles.h9_w96}
+              />
+            </Box>
+            <Box>
+              <Box>Due Date</Box>
+              <Input
+                type="date"
+                name="due-date"
+                onChange={(e) => setDueDate(e.target.value)}
+                className={styles.h9_w96}
+              />
+            </Box>
+            <Box>
+              <Box>Reason</Box>
+              <Input
+                type="text"
+                name="reason"
+                onChange={(e) => setReason(e.target.value)}
+                className={styles.h9_w96}
+              />
+            </Box>
+            <Button
+              type="submit"
+              disabled={!canSubmit()}
+              className={styles.h9_w24}
             >
-              {Array.from(storageChains.entries()).map(([key, value]) => (
-                <option key={key} value={key}>
-                  {value.name} ({value.type})
-                </option>
-              ))}
-            </select>
-            <p className={styles.text_sm}>
-              A hash of the request contents (IPFS CID) is stored on the Storage
-              Chain regardless of the selected Currency and Payment Chain.
-            </p>
-          </div>
-        </label>
-        <br></br>
-        <label>
-          Amount *
-          <div>
-            <input
-              type="number"
-              name="expected-amount"
-              step="any"
-              onChange={(e) => setExpectedAmount(e.target.value)}
-              className={styles.h9_w96}
-            />
-            <p className={styles.text_sm}>
-              The requested amount in human-readable units. This demo uses
-              viem&apos;s parseUnits function to convert to EVM-compatible
-              units, respecting the token&apos;s decimals.
-            </p>
-          </div>
-        </label>
-        <br></br>
-        <label>
-          Currency *
-          <div>
-            <select
-              name="currency"
-              onChange={(e) => setCurrency(e.target.value)}
-              defaultValue={currency}
-              className={styles.h9_w96}
-            >
-              {Array.from(currencies.entries()).map(([key, value]) => (
-                <option key={key} value={key}>
-                  {value.symbol} ({value.network})
-                </option>
-              ))}
-            </select>
-            <p className={styles.text_sm}>
-              The requested currency. This determines the Payment Chain.
-            </p>
-          </div>
-        </label>
-        <br></br>
-        <label>
-          Payment Recipient
-          <div>
-            <input
-              type="text"
-              name="payment-recipient"
-              placeholder={address}
-              onChange={(e) => setPaymentRecipient(e.target.value)}
-              className={styles.h9_w96}
-            />
-            <p className={styles.text_sm}>
-              The address that will receive the payment. If not specfied,
-              defaults to the Payee Identity.
-            </p>
-          </div>
-        </label>
-        <br></br>
-        <label>
-          Payer Identity
-          <div>
-            <input
-              type="text"
-              name="payer-identity"
-              placeholder="0x..."
-              onChange={(e) => setPayerIdentity(e.target.value)}
-              className={styles.h9_w96}
-            />
-            <p className={styles.text_sm}>
-              The identity address of the Payer. The Payer will see this request
-              the next time they query requests associated with their identity.
-              A request without a Payer Identity can be paid by any identity but
-              requires an out-of-band notification to notify the Payer.
-            </p>
-          </div>
-        </label>
-        <br></br>
-        <label>
-          Due Date
-          <div>
-            <input
-              type="date"
-              name="due-date"
-              onChange={(e) => setDueDate(e.target.value)}
-              className={styles.h9_w96}
-            />
-          </div>
-          <p className={styles.text_sm}>
-            The date by which the request should be paid. Due Date is stored in
-            the contentData of the request. For a standardized invoice schema,
-            consider using rnf_invoice format from @requestnetwork/data-format
-          </p>
-        </label>
-        <br></br>
-        <label>
-          Reason
-          <div>
-            <input
-              type="text"
-              name="reason"
-              onChange={(e) => setReason(e.target.value)}
-              className={styles.h9_w96}
-            />
-          </div>
-          <p className={styles.text_sm}>
-            The reason for the request. Reason is stored in the contentData of
-            the request. For a standardized invoice schema, consider using
-            rnf_invoice format from @requestnetwork/data-format
-          </p>
-        </label>
-        <br></br>
-        <button type="submit" disabled={!canSubmit()} className={styles.h9_w24}>
-          Submit
-        </button>
-      </form>
-      <br></br>
-      <h4>Get Testnet Funds</h4>
-      <br></br>
-      <ul>
-        <li>
-          &#8226; Get FAU on Goerli using the{" "}
-          <Link href="https://erc20faucet.com/" target="_blank">
-            ERC20 Faucet by peppersec
-          </Link>
-        </li>
-        <li>
-          &#8226; Get USDC on Goerli using the{" "}
-          <Link href="https://usdcfaucet.com/" target="_blank">
-            USDC Faucet by blockpatron
-          </Link>
-        </li>
-      </ul>
-      <br></br>
-      <h4>Pay a request</h4>
-      <br></br>
-      <ConnectButton showBalance={false} />
-      <br></br>
-      <button
-        disabled={
-          !switchNetwork ||
-          !requestData ||
-          requestData?.currencyInfo.network === chain?.network
-        }
-        onClick={() =>
-          switchNetwork?.(
-            chains.find(
-              (chain) => chain.network === requestData?.currencyInfo.network
-            )?.id
-          )
-        }
-        className={styles.h9_w96}
+              Submit
+            </Button>
+          </VStack>
+        </form>
+      </Box>
+      <Box
+        background={"white"}
+        borderWidth={"1px"}
+        borderRadius={"20px"}
+        borderColor={"gray.400"}
+        shadow={"md"}
+        p={"30px"}
       >
-        Switch to Payment Chain: {requestData?.currencyInfo.network}
-        {isSwitchNetworkLoading && " (switching)"}
-      </button>
-      <br></br>
-      <br></br>
-      <button
-        type="button"
-        disabled={!canApprove()}
-        onClick={handleApprove}
-        className={styles.h9_w24}
-      >
-        Approve
-      </button>
-      <br></br>
-      <div>
-        {!switchNetwork &&
-          "Programmatic switch network not supported by wallet."}
-      </div>
-      <div>{error && error.message}</div>
-      <br></br>
-      <button
-        type="button"
-        onClick={handlePay}
-        disabled={!canPay()}
-        className={styles.h9_w24}
-      >
-        Pay now
-      </button>
-      <br></br>
-      <br></br>
-      <h4>Request info</h4>
-      <br></br>
-      <button type="button" onClick={handleClear} className={styles.h9_w24}>
-        Clear
-      </button>
-      <p>App status: {status}</p>
-      <p>Request state: {requestData?.state}</p>
-      <pre>{JSON.stringify(requestData, undefined, 2)}</pre>
-    </div>
+        <Center mb={"30px"} color={"gray.700"}>
+          <Heading>Investor</Heading>
+        </Center>
+        <VStack spacing={"20px"} alignItems={"start"}>
+          <ConnectButton showBalance={false} />
+          <Button
+            disabled={
+              !switchNetwork ||
+              !requestData ||
+              requestData?.currencyInfo.network === chain?.network
+            }
+            onClick={() =>
+              switchNetwork?.(
+                chains.find(
+                  (chain) => chain.network === requestData?.currencyInfo.network
+                )?.id
+              )
+            }
+            className={styles.h9_w96}
+          >
+            Switch to Payment Chain: {requestData?.currencyInfo.network}
+            {isSwitchNetworkLoading && " (switching)"}
+          </Button>
+          <Button
+            type="button"
+            disabled={!canApprove()}
+            onClick={handleApprove}
+            className={styles.h9_w24}
+          >
+            Approve
+          </Button>
+          {!switchNetwork && (
+            <Box>Programmatic switch network not supported by wallet.</Box>
+          )}
+          <Box>{error && error.message}</Box>
+          <Button
+            type="button"
+            onClick={handlePay}
+            disabled={!canPay()}
+            className={styles.h9_w24}
+          >
+            Pay now
+          </Button>
+          <Box>Request info</Box>
+          <Button type="button" onClick={handleClear} className={styles.h9_w24}>
+            Clear
+          </Button>
+          <Box>App status: {status}</Box>
+          <Box>Request state: {requestData?.state}</Box>
+          <Box>{JSON.stringify(requestData, undefined, 2)}</Box>
+        </VStack>
+      </Box>
+    </SimpleGrid>
   );
 }
