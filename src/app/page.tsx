@@ -32,33 +32,31 @@ import {
   Box,
   Button,
   Center,
+  Divider,
+  Flex,
   HStack,
   Heading,
   Input,
   Select,
   SimpleGrid,
+  Spacer,
   VStack,
+  useSteps,
+  useToast,
 } from "@chakra-ui/react";
-
-enum APP_STATUS {
-  AWAITING_INPUT = "awaiting input",
-  SUBMITTING = "submitting",
-  PERSISTING_TO_IPFS = "persisting to ipfs",
-  PERSISTING_ON_CHAIN = "persisting on-chain",
-  REQUEST_CONFIRMED = "request confirmed",
-  APPROVING = "approving",
-  APPROVED = "approved",
-  PAYING = "paying",
-  REQUEST_PAID = "request paid",
-  ERROR_OCCURRED = "error occurred",
-}
+import { Steps, Step } from "chakra-ui-steps";
+import { APP_STATUS } from "@/config/status";
+import { IoCheckmarkCircleSharp } from "react-icons/io5";
 
 export default function Home() {
+  const toast = useToast({});
   const [storageChain, setStorageChain] = useState("5");
   const [expectedAmount, setExpectedAmount] = useState("");
   const [currency, setCurrency] = useState(
     "5_0xBA62BCfcAaFc6622853cca2BE6Ac7d845BC0f2Dc"
   );
+  const [isAccepted, setIsAccepted] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [paymentRecipient, setPaymentRecipient] = useState("");
   const [payerIdentity, setPayerIdentity] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -77,6 +75,9 @@ export default function Home() {
     useState<Types.IRequestDataWithEvents>();
   const provider = useProvider();
   const signer = useSigner();
+  const { goToNext, goToPrevious, activeStep } = useSteps({
+    count: 3,
+  });
 
   async function payTheRequest() {
     const requestClient = new RequestNetwork({
@@ -177,6 +178,16 @@ export default function Home() {
   }
 
   function canApprove() {
+    console.log(
+      status === APP_STATUS.REQUEST_CONFIRMED &&
+        !isDisconnected &&
+        !isConnecting &&
+        !isError &&
+        !isLoading &&
+        !isSwitchNetworkLoading &&
+        requestData?.currencyInfo.network === chain?.network
+    );
+
     return (
       status === APP_STATUS.REQUEST_CONFIRMED &&
       !isDisconnected &&
@@ -303,169 +314,450 @@ export default function Home() {
   }
 
   return (
-    <SimpleGrid columns={2} spacing={10} p={"50px"}>
-      <Box
-        background={"white"}
-        borderWidth={"1px"}
-        borderRadius={"20px"}
-        borderColor={"gray.400"}
-        shadow={"md"}
-        p={"30px"}
-      >
-        <Center mb={"30px"} color={"gray.700"}>
-          <Heading>NFT Designer</Heading>
-        </Center>
-        <form onSubmit={handleSubmit}>
-          <VStack spacing={"20px"} alignItems={"start"}>
-            <ConnectButton chainStatus="none" showBalance={false} />
-            <Box>
-              <Box>Storage Chain *</Box>
-              <Select
-                name="storage-chain"
-                onChange={(e) => setStorageChain(e.target.value)}
-                defaultValue={storageChain}
+    <>
+      <Box p={"50px"} pb={"0px"} pt={"20px"}>
+        <Box
+          w={"full"}
+          background={"white"}
+          borderWidth={"1px"}
+          borderRadius={"20px"}
+          borderColor={"gray.400"}
+          shadow={"md"}
+          p={"30px"}
+        >
+          <Center>
+            <Steps activeStep={activeStep}>
+              <Step label="Step 1" description="This is the first step" />
+              <Step label="Step 2" description="This is the second step" />
+              <Step label="Step 3" description="This is the third step" />
+            </Steps>
+          </Center>
+        </Box>
+      </Box>
+      {activeStep === 0 && (
+        <SimpleGrid columns={2} spacing={"30px"} p={"50px"} py={"20px"}>
+          <Box
+            background={"white"}
+            borderWidth={"1px"}
+            borderRadius={"20px"}
+            borderColor={"gray.400"}
+            shadow={"md"}
+            p={"30px"}
+          >
+            <Center mb={"30px"} color={"gray.700"}>
+              <Heading>Designer</Heading>
+            </Center>
+            <form onSubmit={handleSubmit}>
+              <VStack spacing={"20px"} alignItems={"start"}>
+                <ConnectButton chainStatus="none" showBalance={false} />
+                <Box>
+                  <Box>Storage Chain *</Box>
+                  <Select
+                    name="storage-chain"
+                    onChange={(e) => setStorageChain(e.target.value)}
+                    defaultValue={storageChain}
+                    className={styles.h9_w96}
+                  >
+                    {Array.from(storageChains.entries()).map(([key, value]) => (
+                      <option key={key} value={key}>
+                        {value.name} ({value.type})
+                      </option>
+                    ))}
+                  </Select>
+                </Box>
+                <Box>
+                  <Box>Amount *</Box>
+                  <Input
+                    type="number"
+                    name="expected-amount"
+                    step="any"
+                    onChange={(e) => setExpectedAmount(e.target.value)}
+                    className={styles.h9_w96}
+                  />
+                </Box>
+                <Box>
+                  <Box>Currency *</Box>
+                  <Select
+                    name="currency"
+                    onChange={(e) => setCurrency(e.target.value)}
+                    defaultValue={currency}
+                    className={styles.h9_w96}
+                  >
+                    {Array.from(currencies.entries()).map(([key, value]) => (
+                      <option key={key} value={key}>
+                        {value.symbol} ({value.network})
+                      </option>
+                    ))}
+                  </Select>
+                </Box>
+                <Box>
+                  <Box>Payment Recipient</Box>
+                  <Input
+                    type="text"
+                    name="payment-recipient"
+                    placeholder={address}
+                    onChange={(e) => setPaymentRecipient(e.target.value)}
+                    className={styles.h9_w96}
+                  />
+                </Box>
+                <Box>
+                  <Box>Payer Identity</Box>
+                  <Input
+                    type="text"
+                    name="payer-identity"
+                    placeholder="0x..."
+                    onChange={(e) => setPayerIdentity(e.target.value)}
+                    className={styles.h9_w96}
+                  />
+                </Box>
+                <Box>
+                  <Box>Due Date</Box>
+                  <Input
+                    type="date"
+                    name="due-date"
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className={styles.h9_w96}
+                  />
+                </Box>
+                <Button
+                  type="submit"
+                  isDisabled={!canSubmit()}
+                  className={styles.h9_w24}
+                >
+                  Submit
+                </Button>
+              </VStack>
+            </form>
+          </Box>
+          <Box
+            background={"white"}
+            borderWidth={"1px"}
+            borderRadius={"20px"}
+            borderColor={"gray.400"}
+            shadow={"md"}
+            p={"30px"}
+          >
+            <Center mb={"30px"} color={"gray.700"}>
+              <Heading>Investor</Heading>
+            </Center>
+            <VStack spacing={"20px"} alignItems={"start"}>
+              <ConnectButton showBalance={false} />
+              <Button
+                isDisabled={
+                  !switchNetwork ||
+                  !requestData ||
+                  requestData?.currencyInfo.network === chain?.network
+                }
+                onClick={() =>
+                  switchNetwork?.(
+                    chains.find(
+                      (chain) =>
+                        chain.network === requestData?.currencyInfo.network
+                    )?.id
+                  )
+                }
                 className={styles.h9_w96}
               >
-                {Array.from(storageChains.entries()).map(([key, value]) => (
-                  <option key={key} value={key}>
-                    {value.name} ({value.type})
-                  </option>
-                ))}
-              </Select>
-            </Box>
-            <Box>
-              <Box>Amount *</Box>
-              <Input
-                type="number"
-                name="expected-amount"
-                step="any"
-                onChange={(e) => setExpectedAmount(e.target.value)}
-                className={styles.h9_w96}
-              />
-            </Box>
-            <Box>
-              <Box>Currency *</Box>
-              <Select
-                name="currency"
-                onChange={(e) => setCurrency(e.target.value)}
-                defaultValue={currency}
+                Switch to Payment Chain: {requestData?.currencyInfo.network}
+                {isSwitchNetworkLoading && " (switching)"}
+              </Button>
+              <Button
+                type="button"
+                isDisabled={!canApprove()}
+                onClick={handleApprove}
+                className={styles.h9_w24}
+              >
+                Approve
+              </Button>
+              {!switchNetwork && (
+                <Box>Programmatic switch network not supported by wallet.</Box>
+              )}
+              <Box>{error && error.message}</Box>
+              <Button
+                type="button"
+                onClick={handlePay}
+                isDisabled={!canPay()}
+                className={styles.h9_w24}
+              >
+                Pay now
+              </Button>
+              <Box>Request info</Box>
+              <Button
+                type="button"
+                onClick={handleClear}
+                className={styles.h9_w24}
+              >
+                Clear
+              </Button>
+              <Box>Invoice status: {status}</Box>
+              <Box>{JSON.stringify(requestData, undefined, 2)}</Box>
+            </VStack>
+          </Box>
+        </SimpleGrid>
+      )}
+      {activeStep === 1 && (
+        <SimpleGrid columns={2} spacing={"30px"} p={"50px"} py={"20px"}>
+          <Box
+            background={"white"}
+            borderWidth={"1px"}
+            borderRadius={"20px"}
+            borderColor={"gray.400"}
+            shadow={"md"}
+            p={"30px"}
+          >
+            <Center mb={"30px"} color={"gray.700"}>
+              <Heading>Designer</Heading>
+            </Center>
+            <VStack>
+              <Box>Screenshot URL</Box>
+              <Input />
+              <Box>Demo URL</Box>
+              <Input />
+              <Flex
+                w={"full"}
+                justifyContent={"center"}
+                alignItems={"center"}
+                px={"10px"}
+              >
+                {isSubmitted ? (
+                  <Box fontSize={"3xl"}>
+                    <IoCheckmarkCircleSharp />
+                  </Box>
+                ) : (
+                  <Button onClick={() => setIsSubmitted(true)}>
+                    Submit milestone
+                  </Button>
+                )}
+              </Flex>
+            </VStack>
+            <Divider orientation="horizontal" my={"20px"} />
+            <form onSubmit={handleSubmit}>
+              <VStack spacing={"20px"} alignItems={"start"}>
+                <ConnectButton chainStatus="none" showBalance={false} />
+                <Box>
+                  <Box>Storage Chain *</Box>
+                  <Select
+                    name="storage-chain"
+                    onChange={(e) => setStorageChain(e.target.value)}
+                    defaultValue={storageChain}
+                    className={styles.h9_w96}
+                  >
+                    {Array.from(storageChains.entries()).map(([key, value]) => (
+                      <option key={key} value={key}>
+                        {value.name} ({value.type})
+                      </option>
+                    ))}
+                  </Select>
+                </Box>
+                <Box>
+                  <Box>Amount *</Box>
+                  <Input
+                    type="number"
+                    name="expected-amount"
+                    step="any"
+                    onChange={(e) => setExpectedAmount(e.target.value)}
+                    className={styles.h9_w96}
+                  />
+                </Box>
+                <Box>
+                  <Box>Currency *</Box>
+                  <Select
+                    name="currency"
+                    onChange={(e) => setCurrency(e.target.value)}
+                    defaultValue={currency}
+                    className={styles.h9_w96}
+                  >
+                    {Array.from(currencies.entries()).map(([key, value]) => (
+                      <option key={key} value={key}>
+                        {value.symbol} ({value.network})
+                      </option>
+                    ))}
+                  </Select>
+                </Box>
+                <Box>
+                  <Box>Payment Recipient</Box>
+                  <Input
+                    type="text"
+                    name="payment-recipient"
+                    placeholder={address}
+                    onChange={(e) => setPaymentRecipient(e.target.value)}
+                    className={styles.h9_w96}
+                  />
+                </Box>
+                <Box>
+                  <Box>Payer Identity</Box>
+                  <Input
+                    type="text"
+                    name="payer-identity"
+                    placeholder="0x..."
+                    onChange={(e) => setPayerIdentity(e.target.value)}
+                    className={styles.h9_w96}
+                  />
+                </Box>
+                <Box>
+                  <Box>Due Date</Box>
+                  <Input
+                    type="date"
+                    name="due-date"
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className={styles.h9_w96}
+                  />
+                </Box>
+                <Button
+                  type="submit"
+                  isDisabled={!canSubmit()}
+                  className={styles.h9_w24}
+                >
+                  Submit
+                </Button>
+              </VStack>
+            </form>
+          </Box>
+          <Box
+            background={"white"}
+            borderWidth={"1px"}
+            borderRadius={"20px"}
+            borderColor={"gray.400"}
+            shadow={"md"}
+            p={"30px"}
+          >
+            <Center mb={"30px"} color={"gray.700"}>
+              <Heading>Investor</Heading>
+            </Center>
+            <VStack>
+              <Flex
+                w={"full"}
+                justifyContent={"center"}
+                alignItems={"center"}
+                px={"10px"}
+              >
+                {isAccepted ? (
+                  <Box fontSize={"3xl"}>
+                    <IoCheckmarkCircleSharp />
+                  </Box>
+                ) : (
+                  <Button
+                    onClick={() => setIsAccepted(true)}
+                    isDisabled={!isSubmitted}
+                  >
+                    Accept
+                  </Button>
+                )}
+              </Flex>
+            </VStack>
+            <Divider orientation="horizontal" my={"20px"} />
+            <VStack spacing={"20px"} alignItems={"start"}>
+              <ConnectButton showBalance={false} />
+              <Button
+                isDisabled={
+                  !switchNetwork ||
+                  !requestData ||
+                  requestData?.currencyInfo.network === chain?.network
+                }
+                onClick={() =>
+                  switchNetwork?.(
+                    chains.find(
+                      (chain) =>
+                        chain.network === requestData?.currencyInfo.network
+                    )?.id
+                  )
+                }
                 className={styles.h9_w96}
               >
-                {Array.from(currencies.entries()).map(([key, value]) => (
-                  <option key={key} value={key}>
-                    {value.symbol} ({value.network})
-                  </option>
-                ))}
-              </Select>
-            </Box>
-            <Box>
-              <Box>Payment Recipient</Box>
-              <Input
-                type="text"
-                name="payment-recipient"
-                placeholder={address}
-                onChange={(e) => setPaymentRecipient(e.target.value)}
-                className={styles.h9_w96}
-              />
-            </Box>
-            <Box>
-              <Box>Payer Identity</Box>
-              <Input
-                type="text"
-                name="payer-identity"
-                placeholder="0x..."
-                onChange={(e) => setPayerIdentity(e.target.value)}
-                className={styles.h9_w96}
-              />
-            </Box>
-            <Box>
-              <Box>Due Date</Box>
-              <Input
-                type="date"
-                name="due-date"
-                onChange={(e) => setDueDate(e.target.value)}
-                className={styles.h9_w96}
-              />
-            </Box>
-            <Box>
-              <Box>Reason</Box>
-              <Input
-                type="text"
-                name="reason"
-                onChange={(e) => setReason(e.target.value)}
-                className={styles.h9_w96}
-              />
-            </Box>
+                Switch to Payment Chain: {requestData?.currencyInfo.network}
+                {isSwitchNetworkLoading && " (switching)"}
+              </Button>
+              <Button
+                type="button"
+                isDisabled={!canApprove()}
+                onClick={handleApprove}
+                className={styles.h9_w24}
+              >
+                Approve
+              </Button>
+              {!switchNetwork && (
+                <Box>Programmatic switch network not supported by wallet.</Box>
+              )}
+              <Box>{error && error.message}</Box>
+              <Button
+                type="button"
+                onClick={handlePay}
+                isDisabled={!canPay()}
+                className={styles.h9_w24}
+              >
+                Pay now
+              </Button>
+              <Box>Request info</Box>
+              <Button
+                type="button"
+                onClick={handleClear}
+                className={styles.h9_w24}
+              >
+                Clear
+              </Button>
+              <Box>Invoice status: {status}</Box>
+            </VStack>
+          </Box>
+        </SimpleGrid>
+      )}
+      {activeStep === 2 && (
+        <Box
+          w={"full"}
+          p={"50px"}
+          py={"20px"}
+          height={"500px"}
+          position={"relative"}
+        >
+          <Flex
+            h={"full"}
+            background={"white"}
+            borderWidth={"1px"}
+            borderRadius={"20px"}
+            borderColor={"gray.400"}
+            shadow={"md"}
+            p={"30px"}
+            alignItems={"center"}
+            justifyContent={"center"}
+          >
+            <Box fontWeight={"bold"}>Completed!!!</Box>
+          </Flex>
+        </Box>
+      )}
+      <Box p={"50px"} pb={"20px"} pt={"20px"}>
+        <Box
+          w={"full"}
+          background={"white"}
+          borderWidth={"1px"}
+          borderRadius={"20px"}
+          borderColor={"gray.400"}
+          shadow={"md"}
+          p={"30px"}
+        >
+          <HStack>
             <Button
-              type="submit"
-              disabled={!canSubmit()}
-              className={styles.h9_w24}
+              onClick={() => {
+                goToPrevious();
+              }}
             >
-              Submit
+              Prev step
             </Button>
-          </VStack>
-        </form>
+            <Spacer />
+            <Button
+              onClick={() => {
+                toast({
+                  status: "success",
+                  description: "Going to next milestone",
+                  title: "Milestone",
+                  position: "top-left",
+                });
+                goToNext();
+              }}
+            >
+              Next step
+            </Button>
+          </HStack>
+        </Box>
       </Box>
-      <Box
-        background={"white"}
-        borderWidth={"1px"}
-        borderRadius={"20px"}
-        borderColor={"gray.400"}
-        shadow={"md"}
-        p={"30px"}
-      >
-        <Center mb={"30px"} color={"gray.700"}>
-          <Heading>Investor</Heading>
-        </Center>
-        <VStack spacing={"20px"} alignItems={"start"}>
-          <ConnectButton showBalance={false} />
-          <Button
-            disabled={
-              !switchNetwork ||
-              !requestData ||
-              requestData?.currencyInfo.network === chain?.network
-            }
-            onClick={() =>
-              switchNetwork?.(
-                chains.find(
-                  (chain) => chain.network === requestData?.currencyInfo.network
-                )?.id
-              )
-            }
-            className={styles.h9_w96}
-          >
-            Switch to Payment Chain: {requestData?.currencyInfo.network}
-            {isSwitchNetworkLoading && " (switching)"}
-          </Button>
-          <Button
-            type="button"
-            disabled={!canApprove()}
-            onClick={handleApprove}
-            className={styles.h9_w24}
-          >
-            Approve
-          </Button>
-          {!switchNetwork && (
-            <Box>Programmatic switch network not supported by wallet.</Box>
-          )}
-          <Box>{error && error.message}</Box>
-          <Button
-            type="button"
-            onClick={handlePay}
-            disabled={!canPay()}
-            className={styles.h9_w24}
-          >
-            Pay now
-          </Button>
-          <Box>Request info</Box>
-          <Button type="button" onClick={handleClear} className={styles.h9_w24}>
-            Clear
-          </Button>
-          <Box>App status: {status}</Box>
-          <Box>Request state: {requestData?.state}</Box>
-          <Box>{JSON.stringify(requestData, undefined, 2)}</Box>
-        </VStack>
-      </Box>
-    </SimpleGrid>
+    </>
   );
 }
