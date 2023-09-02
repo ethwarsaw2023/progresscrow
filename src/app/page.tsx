@@ -11,8 +11,8 @@ import {
   useNetwork,
   useSwitchNetwork,
 } from "wagmi";
-import { currencies } from "../config/currency";
-import { storageChains } from "../config/storage-chain";
+import { currency as currencyData } from "../config/currency";
+import { storageChainData } from "../config/storage-chain";
 import {
   RequestNetwork,
   Types,
@@ -82,7 +82,7 @@ export default function Home() {
   async function payTheRequest() {
     const requestClient = new RequestNetwork({
       nodeConnectionConfig: {
-        baseURL: storageChains.get(storageChain)!.gateway,
+        baseURL: storageChainData.gateway,
       },
     });
 
@@ -134,7 +134,7 @@ export default function Home() {
   async function approve() {
     const requestClient = new RequestNetwork({
       nodeConnectionConfig: {
-        baseURL: storageChains.get(storageChain)!.gateway,
+        baseURL: storageChainData.gateway,
       },
     });
 
@@ -212,20 +212,20 @@ export default function Home() {
     const signatureProvider = new Web3SignatureProvider(walletClient);
     const requestClient = new RequestNetwork({
       nodeConnectionConfig: {
-        baseURL: storageChains.get(storageChain)!.gateway,
+        baseURL: storageChainData.gateway,
       },
       signatureProvider,
     });
     const requestCreateParameters: Types.ICreateRequestParameters = {
       requestInfo: {
         currency: {
-          type: currencies.get(currency)!.type,
-          value: currencies.get(currency)!.value,
-          network: currencies.get(currency)!.network,
+          type: currencyData.type,
+          value: currencyData.value,
+          network: currencyData.network,
         },
         expectedAmount: parseUnits(
           expectedAmount as `${number}`,
-          currencies.get(currency)!.decimals
+          currencyData.decimals
         ).toString(),
         payee: {
           type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
@@ -236,7 +236,7 @@ export default function Home() {
       paymentNetwork: {
         id: Types.Extension.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT,
         parameters: {
-          paymentNetworkName: currencies.get(currency)!.network,
+          paymentNetworkName: currencyData.network,
           paymentAddress: paymentRecipient || address,
           feeAddress: zeroAddress,
           feeAmount: "0",
@@ -308,7 +308,7 @@ export default function Home() {
     createRequest();
   }
 
-  function handleClear(_: React.MouseEvent<HTMLButtonElement>) {
+  function handleClear() {
     setRequestData(undefined);
     setStatus(APP_STATUS.AWAITING_INPUT);
   }
@@ -351,21 +351,6 @@ export default function Home() {
               <VStack spacing={"20px"} alignItems={"start"}>
                 <ConnectButton chainStatus="none" showBalance={false} />
                 <Box>
-                  <Box>Storage Chain *</Box>
-                  <Select
-                    name="storage-chain"
-                    onChange={(e) => setStorageChain(e.target.value)}
-                    defaultValue={storageChain}
-                    className={styles.h9_w96}
-                  >
-                    {Array.from(storageChains.entries()).map(([key, value]) => (
-                      <option key={key} value={key}>
-                        {value.name} ({value.type})
-                      </option>
-                    ))}
-                  </Select>
-                </Box>
-                <Box>
                   <Box>Amount *</Box>
                   <Input
                     type="number"
@@ -374,21 +359,6 @@ export default function Home() {
                     onChange={(e) => setExpectedAmount(e.target.value)}
                     className={styles.h9_w96}
                   />
-                </Box>
-                <Box>
-                  <Box>Currency *</Box>
-                  <Select
-                    name="currency"
-                    onChange={(e) => setCurrency(e.target.value)}
-                    defaultValue={currency}
-                    className={styles.h9_w96}
-                  >
-                    {Array.from(currencies.entries()).map(([key, value]) => (
-                      <option key={key} value={key}>
-                        {value.symbol} ({value.network})
-                      </option>
-                    ))}
-                  </Select>
                 </Box>
                 <Box>
                   <Box>Payment Recipient</Box>
@@ -423,6 +393,9 @@ export default function Home() {
                   type="submit"
                   isDisabled={!canSubmit()}
                   className={styles.h9_w24}
+                  background={"blue.400"}
+                  color={"white"}
+                  shadow={"sm"}
                 >
                   Submit
                 </Button>
@@ -443,6 +416,9 @@ export default function Home() {
             <VStack spacing={"20px"} alignItems={"start"}>
               <ConnectButton showBalance={false} />
               <Button
+                shadow={"sm"}
+                background={"blue.400"}
+                color={"white"}
                 isDisabled={
                   !switchNetwork ||
                   !requestData ||
@@ -462,6 +438,9 @@ export default function Home() {
                 {isSwitchNetworkLoading && " (switching)"}
               </Button>
               <Button
+                shadow={"sm"}
+                background={"blue.400"}
+                color={"white"}
                 type="button"
                 isDisabled={!canApprove()}
                 onClick={handleApprove}
@@ -474,20 +453,15 @@ export default function Home() {
               )}
               <Box>{error && error.message}</Box>
               <Button
+                shadow={"sm"}
+                background={"blue.400"}
+                color={"white"}
                 type="button"
                 onClick={handlePay}
                 isDisabled={!canPay()}
                 className={styles.h9_w24}
               >
                 Pay now
-              </Button>
-              <Box>Request info</Box>
-              <Button
-                type="button"
-                onClick={handleClear}
-                className={styles.h9_w24}
-              >
-                Clear
               </Button>
               <Box>Invoice status: {status}</Box>
               <Box>{JSON.stringify(requestData, undefined, 2)}</Box>
@@ -524,7 +498,19 @@ export default function Home() {
                     <IoCheckmarkCircleSharp />
                   </Box>
                 ) : (
-                  <Button onClick={() => setIsSubmitted(true)}>
+                  <Button
+                    shadow={"sm"}
+                    background={"blue.400"}
+                    color={"white"}
+                    onClick={() => {
+                      toast({
+                        status: "success",
+                        title: "Milestone",
+                        description: "Your milestone has been submitted",
+                      });
+                      setIsSubmitted(true);
+                    }}
+                  >
                     Submit milestone
                   </Button>
                 )}
@@ -535,21 +521,6 @@ export default function Home() {
               <VStack spacing={"20px"} alignItems={"start"}>
                 <ConnectButton chainStatus="none" showBalance={false} />
                 <Box>
-                  <Box>Storage Chain *</Box>
-                  <Select
-                    name="storage-chain"
-                    onChange={(e) => setStorageChain(e.target.value)}
-                    defaultValue={storageChain}
-                    className={styles.h9_w96}
-                  >
-                    {Array.from(storageChains.entries()).map(([key, value]) => (
-                      <option key={key} value={key}>
-                        {value.name} ({value.type})
-                      </option>
-                    ))}
-                  </Select>
-                </Box>
-                <Box>
                   <Box>Amount *</Box>
                   <Input
                     type="number"
@@ -558,21 +529,6 @@ export default function Home() {
                     onChange={(e) => setExpectedAmount(e.target.value)}
                     className={styles.h9_w96}
                   />
-                </Box>
-                <Box>
-                  <Box>Currency *</Box>
-                  <Select
-                    name="currency"
-                    onChange={(e) => setCurrency(e.target.value)}
-                    defaultValue={currency}
-                    className={styles.h9_w96}
-                  >
-                    {Array.from(currencies.entries()).map(([key, value]) => (
-                      <option key={key} value={key}>
-                        {value.symbol} ({value.network})
-                      </option>
-                    ))}
-                  </Select>
                 </Box>
                 <Box>
                   <Box>Payment Recipient</Box>
@@ -604,6 +560,9 @@ export default function Home() {
                   />
                 </Box>
                 <Button
+                  shadow={"sm"}
+                  background={"blue.400"}
+                  color={"white"}
                   type="submit"
                   isDisabled={!canSubmit()}
                   className={styles.h9_w24}
@@ -637,7 +596,17 @@ export default function Home() {
                   </Box>
                 ) : (
                   <Button
-                    onClick={() => setIsAccepted(true)}
+                    shadow={"sm"}
+                    background={"blue.400"}
+                    color={"white"}
+                    onClick={() => {
+                      toast({
+                        status: "success",
+                        title: "Milestone",
+                        description: "Milestone has been accepted",
+                      });
+                      setIsAccepted(true);
+                    }}
                     isDisabled={!isSubmitted}
                   >
                     Accept
@@ -649,6 +618,9 @@ export default function Home() {
             <VStack spacing={"20px"} alignItems={"start"}>
               <ConnectButton showBalance={false} />
               <Button
+                shadow={"sm"}
+                background={"blue.400"}
+                color={"white"}
                 isDisabled={
                   !switchNetwork ||
                   !requestData ||
@@ -668,6 +640,9 @@ export default function Home() {
                 {isSwitchNetworkLoading && " (switching)"}
               </Button>
               <Button
+                shadow={"sm"}
+                background={"blue.400"}
+                color={"white"}
                 type="button"
                 isDisabled={!canApprove()}
                 onClick={handleApprove}
@@ -680,20 +655,15 @@ export default function Home() {
               )}
               <Box>{error && error.message}</Box>
               <Button
+                shadow={"sm"}
+                background={"blue.400"}
+                color={"white"}
                 type="button"
                 onClick={handlePay}
                 isDisabled={!canPay()}
                 className={styles.h9_w24}
               >
                 Pay now
-              </Button>
-              <Box>Request info</Box>
-              <Button
-                type="button"
-                onClick={handleClear}
-                className={styles.h9_w24}
-              >
-                Clear
               </Button>
               <Box>Invoice status: {status}</Box>
             </VStack>
@@ -735,6 +705,9 @@ export default function Home() {
         >
           <HStack>
             <Button
+              shadow={"sm"}
+              background={"blue.400"}
+              color={"white"}
               onClick={() => {
                 goToPrevious();
               }}
@@ -743,6 +716,9 @@ export default function Home() {
             </Button>
             <Spacer />
             <Button
+              shadow={"sm"}
+              background={"blue.400"}
+              color={"white"}
               onClick={() => {
                 toast({
                   status: "success",
@@ -751,6 +727,7 @@ export default function Home() {
                   position: "top-left",
                 });
                 goToNext();
+                handleClear();
               }}
             >
               Next step

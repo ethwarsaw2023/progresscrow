@@ -4,22 +4,13 @@ interface StorageChain {
   gateway: string;
 }
 
-// key: {chainId}
-export const storageChains = new Map<string, StorageChain>([
-  [
-    "5",
-    {
-      name: "Goerli",
-      type: "testnet",
-      gateway: "https://goerli.gateway.request.network/",
-    },
-  ],
-  [
-    "100",
-    {
-      name: "Gnosis",
-      type: "mainnet",
-      gateway: "https://xdai.gateway.request.network/",
-    },
-  ],
-]);
+interface StorageChainData extends StorageChain {
+  id: string;
+}
+
+export const storageChainData: StorageChainData = {
+  id: "5",
+  name: "Goerli",
+  type: "testnet",
+  gateway: "https://goerli.gateway.request.network/",
+};
