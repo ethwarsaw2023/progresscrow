@@ -21,7 +21,6 @@ export function publicClientToProvider(publicClient: PublicClient) {
   return new providers.JsonRpcProvider(transport.url as string, network);
 }
 
-/** Hook to convert a viem Public Client to an ethers.js Provider. */
 export function useProvider({ chainId }: { chainId?: number } = {}) {
   const publicClient = usePublicClient({ chainId });
   return useMemo(() => publicClientToProvider(publicClient), [publicClient]);

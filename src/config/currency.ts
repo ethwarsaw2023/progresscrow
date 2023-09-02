@@ -1,16 +1,11 @@
 import { Types } from "@requestnetwork/request-client.js";
 
-// Tip: For more advanced currency managment, use CurrencyManager from @requestnetwork/currency
-
-interface ICurrency extends Types.RequestLogic.ICurrency {
+interface CurrencyData extends Types.RequestLogic.ICurrency {
+  address: string;
   name: string;
   symbol: string;
   chainId: number;
   decimals: number;
-}
-
-interface CurrencyData extends ICurrency {
-  address: string;
 }
 
 export const currency = {

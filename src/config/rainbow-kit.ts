@@ -44,6 +44,7 @@ export const { chains, publicClient, webSocketPublicClient } = configureChains(
   [publicProvider()]
 );
 
+// Sorry, I will use it : )
 // Project ID from WalletConnect account: david.huntmateo@request.network
 const projectId = "9d9d6953cbcd80c6177a7402d79bfa8b";
 

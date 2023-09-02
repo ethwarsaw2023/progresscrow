@@ -1,4 +1,3 @@
-// Copied from https://wagmi.sh/react/ethers-adapters
 import { useMemo } from "react";
 import { providers } from "ethers";
 import { type WalletClient, useWalletClient } from "wagmi";
@@ -15,7 +14,6 @@ export function walletClientToSigner(walletClient: WalletClient) {
   return signer;
 }
 
-/** Hook to convert a viem Wallet Client to an ethers.js Signer. */
 export function useSigner({ chainId }: { chainId?: number } = {}) {
   const { data: walletClient } = useWalletClient({ chainId });
   return useMemo(

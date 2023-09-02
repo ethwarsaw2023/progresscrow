@@ -1,8 +1,8 @@
 "use client";
 
-import "@rainbow-me/rainbowkit/styles.css";
-import styles from "../app/page.module.css";
-import { useState } from "react";
+import { Steps, Step } from "chakra-ui-steps";
+
+import { useEffect, useState } from "react";
 import { parseUnits, zeroAddress } from "viem";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import {
@@ -11,8 +11,6 @@ import {
   useNetwork,
   useSwitchNetwork,
 } from "wagmi";
-import { currency as currencyData } from "../config/currency";
-import { storageChainData } from "../config/storage-chain";
 import {
   RequestNetwork,
   Types,
@@ -26,8 +24,6 @@ import {
   payRequest,
 } from "@requestnetwork/payment-processor";
 import { getPaymentNetworkExtension } from "@requestnetwork/payment-detection";
-import { useProvider } from "../hooks/useProvider";
-import { useSigner } from "../hooks/useSigner";
 import {
   Box,
   Button,
@@ -37,19 +33,27 @@ import {
   HStack,
   Heading,
   Input,
-  Select,
   SimpleGrid,
   Spacer,
   VStack,
   useSteps,
   useToast,
 } from "@chakra-ui/react";
-import { Steps, Step } from "chakra-ui-steps";
-import { APP_STATUS } from "@/config/status";
 import { IoCheckmarkCircleSharp } from "react-icons/io5";
 
+import { useProvider } from "@/hooks/useProvider";
+import { useSigner } from "@/hooks/useSigner";
+import { APP_STATUS } from "@/config/status";
+import { currency as currencyData } from "@/config/currency";
+import { storageChainData } from "@/config/storage-chain";
+import styles from "@/app/page.module.css";
+
+import "@rainbow-me/rainbowkit/styles.css";
+
 export default function Home() {
-  const toast = useToast({});
+  const toast = useToast({
+    position: "top-left",
+  });
   const [storageChain, setStorageChain] = useState("5");
   const [expectedAmount, setExpectedAmount] = useState("");
   const [currency, setCurrency] = useState(
@@ -98,10 +102,8 @@ export default function Home() {
       // TODO Add a timeout
       while (_requestData.balance?.balance! < _requestData.expectedAmount) {
         _requestData = await _request.refresh();
-        alert(`balance = ${_requestData.balance?.balance}`);
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-      alert(`payment detected!`);
       setRequestData(_requestData);
       setStatus(APP_STATUS.REQUEST_PAID);
     } catch (err) {
@@ -143,13 +145,11 @@ export default function Home() {
         requestData!.requestId
       );
       const _requestData = _request.getData();
-      alert(`Checking if payer has sufficient funds...`);
       const _hasSufficientFunds = await hasSufficientFunds(
         _requestData,
         address as string,
         { provider: provider }
       );
-      alert(`_hasSufficientFunds = ${_hasSufficientFunds}`);
       if (!_hasSufficientFunds) {
         setStatus(APP_STATUS.REQUEST_CONFIRMED);
         return;
@@ -158,13 +158,11 @@ export default function Home() {
         getPaymentNetworkExtension(_requestData)?.id ===
         Types.Extension.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT
       ) {
-        alert(`ERC20 Request detected. Checking approval...`);
         const _hasErc20Approval = await hasErc20Approval(
           _requestData,
           address as string,
           provider
         );
-        alert(`_hasErc20Approval = ${_hasErc20Approval}`);
         if (!_hasErc20Approval) {
           const approvalTx = await approveErc20(_requestData, signer);
           await approvalTx.wait(2);
@@ -313,6 +311,12 @@ export default function Home() {
     setStatus(APP_STATUS.AWAITING_INPUT);
   }
 
+  useEffect(() => {
+    if (status === APP_STATUS.AWAITING_INPUT) return;
+
+    toast({ status: "success", title: "Status", description: status });
+  }, [status, toast]);
+
   return (
     <>
       <Box p={"50px"} pb={"0px"} pt={"20px"}>
@@ -448,10 +452,7 @@ export default function Home() {
               >
                 Approve
               </Button>
-              {!switchNetwork && (
-                <Box>Programmatic switch network not supported by wallet.</Box>
-              )}
-              <Box>{error && error.message}</Box>
+              {error && error.message && <Box>{error.message}</Box>}
               <Button
                 shadow={"sm"}
                 background={"blue.400"}
@@ -463,8 +464,6 @@ export default function Home() {
               >
                 Pay now
               </Button>
-              <Box>Invoice status: {status}</Box>
-              <Box>{JSON.stringify(requestData, undefined, 2)}</Box>
             </VStack>
           </Box>
         </SimpleGrid>

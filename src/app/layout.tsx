@@ -1,5 +1,7 @@
-import RootProvider from "../components/providers/root-provider";
 import { Inter } from "next/font/google";
+
+import RootProvider from "@/components/providers/root-provider";
+
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
