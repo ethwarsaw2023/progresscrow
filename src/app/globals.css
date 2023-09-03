@@ -9,15 +9,23 @@
 .phone-buttons {
     display: flex;
     flex-direction: row;
-    
-    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    margin: 0 25%;
+    width: 1000px;
     height: 100%;
+}
+
+.phone-button {
+    flex-grow: 1;
+
 }
 
 .phones {}
 
 .phone {
-    float: left;
+    flex-grow: 6;
     width: 375px;
     height: 812px;
     border: 6px solid gray;

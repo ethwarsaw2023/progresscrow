@@ -69,10 +69,14 @@ const Home = () => {
 
 
     return (
-        <div className="phone_buttons">
-            <div className="phones">
+        <div className="phone-buttons">
+            <div className="phone-button">
                 <Button onClick={e => prevPhone()}>Prev</Button>
+            </div>
+            <div className="phones">
                 {switchPhone(phone)}
+            </div>
+            <div className="phone-button">
                 <Button onClick={e => nextPhone()}>Next</Button>
             </div>
         </div>
