@@ -1,4 +1,3 @@
-// Copied from https://wagmi.sh/react/ethers-adapters
 import { useMemo } from "react";
 import { providers } from "ethers";
 import { type HttpTransport } from "viem";

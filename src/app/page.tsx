@@ -38,15 +38,16 @@ import {
   VStack,
   useSteps,
   useToast,
+  Image,
 } from "@chakra-ui/react";
 import { IoCheckmarkCircleSharp } from "react-icons/io5";
+import Confetti from "react-confetti";
 
 import { useProvider } from "@/hooks/useProvider";
 import { useSigner } from "@/hooks/useSigner";
 import { APP_STATUS } from "@/config/status";
 import { currency as currencyData } from "@/config/currency";
 import { storageChainData } from "@/config/storage-chain";
-import styles from "@/app/page.module.css";
 
 import "@rainbow-me/rainbowkit/styles.css";
 
@@ -54,17 +55,13 @@ export default function Home() {
   const toast = useToast({
     position: "top-left",
   });
-  const [storageChain, setStorageChain] = useState("5");
-  const [expectedAmount, setExpectedAmount] = useState("");
-  const [currency, setCurrency] = useState(
-    "5_0xBA62BCfcAaFc6622853cca2BE6Ac7d845BC0f2Dc"
-  );
+  const [imageURL, setImageURL] = useState<string>();
+  const [expectedAmount, setExpectedAmount] = useState<string>();
   const [isAccepted, setIsAccepted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [paymentRecipient, setPaymentRecipient] = useState("");
-  const [payerIdentity, setPayerIdentity] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [reason, setReason] = useState("");
+  const [paymentRecipient, setPaymentRecipient] = useState<string>();
+  const [payerIdentity, setPayerIdentity] = useState<string>();
+  const [dueDate, setDueDate] = useState<string>();
   const [status, setStatus] = useState(APP_STATUS.AWAITING_INPUT);
   const { data: walletClient, isError, isLoading } = useWalletClient();
   const { address, isConnecting, isDisconnected } = useAccount();
@@ -79,134 +76,137 @@ export default function Home() {
     useState<Types.IRequestDataWithEvents>();
   const provider = useProvider();
   const signer = useSigner();
+
   const { goToNext, goToPrevious, activeStep } = useSteps({
     count: 3,
   });
 
-  async function payTheRequest() {
-    const requestClient = new RequestNetwork({
-      nodeConnectionConfig: {
-        baseURL: storageChainData.gateway,
-      },
-    });
-
+  const handleRequestPayment = async () => {
     try {
-      const _request = await requestClient.fromRequestId(
+      const requestClient = new RequestNetwork({
+        nodeConnectionConfig: {
+          baseURL: storageChainData.gateway,
+        },
+      });
+
+      const targetRequest = await requestClient.fromRequestId(
         requestData!.requestId
       );
-      let _requestData = _request.getData();
-      const paymentTx = await payRequest(_requestData, signer);
+      let targetRequestData = targetRequest.getData();
+      const paymentTx = await payRequest(targetRequestData, signer);
       await paymentTx.wait(2);
 
-      // Poll the request balance once every second until payment is detected
-      // TODO Add a timeout
-      while (_requestData.balance?.balance! < _requestData.expectedAmount) {
-        _requestData = await _request.refresh();
+      while (
+        targetRequestData.balance?.balance! < targetRequestData.expectedAmount
+      ) {
+        targetRequestData = await targetRequest.refresh();
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-      setRequestData(_requestData);
+      setRequestData(targetRequestData);
       setStatus(APP_STATUS.REQUEST_PAID);
     } catch (err) {
       setStatus(APP_STATUS.APPROVED);
       alert(err);
     }
-  }
+  };
 
-  function canPay() {
-    return (
-      status === APP_STATUS.APPROVED &&
-      !isDisconnected &&
-      !isConnecting &&
-      !isError &&
-      !isLoading &&
-      !isSwitchNetworkLoading &&
-      requestData?.currencyInfo.network === chain?.network
-    );
-  }
+  const canPayRequest =
+    status === APP_STATUS.APPROVED &&
+    !isDisconnected &&
+    !isConnecting &&
+    !isError &&
+    !isLoading &&
+    !isSwitchNetworkLoading &&
+    requestData?.currencyInfo.network === chain?.network;
 
-  function handlePay(e: React.MouseEvent<HTMLButtonElement>) {
+  const handlePayment = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (!canPay()) {
-      return;
-    }
-    setStatus(APP_STATUS.PAYING);
-    payTheRequest();
-  }
-
-  async function approve() {
-    const requestClient = new RequestNetwork({
-      nodeConnectionConfig: {
-        baseURL: storageChainData.gateway,
-      },
+    // if (!canPayRequest) {
+    //   return toast({
+    //     status: "error",
+    //     title: "Payment",
+    //     description: "Request cannot be paid",
+    //   });
+    // }
+    toast({
+      description: requestData?.currencyInfo.network === chain?.network,
     });
 
+    setStatus(APP_STATUS.PAYING);
+    handleRequestPayment();
+  };
+
+  const approve = async () => {
     try {
-      const _request = await requestClient.fromRequestId(
+      const requestClient = new RequestNetwork({
+        nodeConnectionConfig: {
+          baseURL: storageChainData.gateway,
+        },
+      });
+
+      const targetRequest = await requestClient.fromRequestId(
         requestData!.requestId
       );
-      const _requestData = _request.getData();
-      const _hasSufficientFunds = await hasSufficientFunds(
-        _requestData,
+      const targetRequestData = targetRequest.getData();
+      const isSolvent = await hasSufficientFunds(
+        targetRequestData,
         address as string,
         { provider: provider }
       );
-      if (!_hasSufficientFunds) {
+
+      if (!isSolvent) {
         setStatus(APP_STATUS.REQUEST_CONFIRMED);
         return;
       }
-      if (
-        getPaymentNetworkExtension(_requestData)?.id ===
-        Types.Extension.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT
-      ) {
-        const _hasErc20Approval = await hasErc20Approval(
-          _requestData,
-          address as string,
-          provider
-        );
-        if (!_hasErc20Approval) {
-          const approvalTx = await approveErc20(_requestData, signer);
-          await approvalTx.wait(2);
-        }
+
+      const paymentNetworkExtensionId =
+        getPaymentNetworkExtension(targetRequestData)?.id;
+      const feeProxyContract =
+        Types.Extension.PAYMENT_NETWORK_ID.ERC20_FEE_PROXY_CONTRACT;
+
+      if (!paymentNetworkExtensionId) return;
+      if (paymentNetworkExtensionId !== feeProxyContract) return;
+
+      const isSpendingApproved = await hasErc20Approval(
+        targetRequestData,
+        address as string,
+        provider
+      );
+      if (!isSpendingApproved) {
+        const approvalTx = await approveErc20(targetRequestData, signer);
+        await approvalTx.wait(2);
       }
       setStatus(APP_STATUS.APPROVED);
     } catch (err) {
       setStatus(APP_STATUS.REQUEST_CONFIRMED);
       alert(JSON.stringify(err));
     }
-  }
+  };
 
-  function canApprove() {
-    console.log(
-      status === APP_STATUS.REQUEST_CONFIRMED &&
-        !isDisconnected &&
-        !isConnecting &&
-        !isError &&
-        !isLoading &&
-        !isSwitchNetworkLoading &&
-        requestData?.currencyInfo.network === chain?.network
-    );
+  const canApprove =
+    status === APP_STATUS.REQUEST_CONFIRMED &&
+    !isDisconnected &&
+    !isConnecting &&
+    !isError &&
+    !isLoading &&
+    !isSwitchNetworkLoading &&
+    requestData?.currencyInfo.network === chain?.network;
 
-    return (
-      status === APP_STATUS.REQUEST_CONFIRMED &&
-      !isDisconnected &&
-      !isConnecting &&
-      !isError &&
-      !isLoading &&
-      !isSwitchNetworkLoading &&
-      requestData?.currencyInfo.network === chain?.network
-    );
-  }
-
-  function handleApprove(e: React.MouseEvent<HTMLButtonElement>) {
+  const handleApprove = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (!canApprove()) {
-      return;
+    if (!canApprove) {
+      return toast({
+        status: "error",
+        title: "Approval",
+        description: "ERC20 spending cannot be approved",
+      });
     }
+
     setStatus(APP_STATUS.APPROVING);
     approve();
-  }
+  };
 
-  async function createRequest() {
+  const createRequest = async () => {
     const signatureProvider = new Web3SignatureProvider(walletClient);
     const requestClient = new RequestNetwork({
       nodeConnectionConfig: {
@@ -214,7 +214,7 @@ export default function Home() {
       },
       signatureProvider,
     });
-    const requestCreateParameters: Types.ICreateRequestParameters = {
+    const requestCreateParameters = {
       requestInfo: {
         currency: {
           type: currencyData.type,
@@ -241,17 +241,15 @@ export default function Home() {
         },
       },
       contentData: {
-        // Tip: Consider using rnf_invoice v0.0.3 format from @requestnetwork/data-format
-        reason: reason,
         dueDate: dueDate,
       },
       signer: {
         type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
         value: address as string,
       },
-    };
+    } satisfies Types.ICreateRequestParameters;
 
-    if (payerIdentity.length > 0) {
+    if (payerIdentity && payerIdentity.length > 0) {
       requestCreateParameters.requestInfo.payer = {
         type: Types.Identity.TYPE.ETHEREUM_ADDRESS,
         value: payerIdentity,
@@ -274,42 +272,43 @@ export default function Home() {
       setStatus(APP_STATUS.ERROR_OCCURRED);
       alert(err);
     }
-  }
+  };
 
-  function canSubmit() {
-    return (
-      status !== APP_STATUS.SUBMITTING &&
-      !isDisconnected &&
-      !isConnecting &&
-      !isError &&
-      !isLoading &&
-      storageChain.length > 0 &&
-      // Payment Recipient is empty || isAddress
-      (paymentRecipient.length === 0 ||
-        (paymentRecipient.startsWith("0x") &&
-          paymentRecipient.length === 42)) &&
-      // Payer is empty || isAddress
-      (payerIdentity.length === 0 ||
-        (payerIdentity.startsWith("0x") && payerIdentity.length === 42)) &&
-      expectedAmount.length > 0 &&
-      currency.length > 0
-    );
-  }
+  const canSubmit =
+    status !== APP_STATUS.SUBMITTING &&
+    !isDisconnected &&
+    !isConnecting &&
+    !isError &&
+    !isLoading &&
+    (paymentRecipient === undefined ||
+      paymentRecipient === "" ||
+      (paymentRecipient?.startsWith("0x") &&
+        paymentRecipient?.length === 42)) &&
+    (payerIdentity === undefined ||
+      payerIdentity === "" ||
+      (payerIdentity.startsWith("0x") && payerIdentity.length === 42)) &&
+    expectedAmount &&
+    expectedAmount.length > 0;
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!canSubmit()) {
-      return;
+    if (!canSubmit) {
+      return toast({
+        status: "error",
+        title: "Request",
+        description: "Payment request cannot be submitted",
+      });
     }
+
     setRequestData(undefined);
     setStatus(APP_STATUS.SUBMITTING);
     createRequest();
-  }
+  };
 
-  function handleClear() {
+  const handleClear = () => {
     setRequestData(undefined);
     setStatus(APP_STATUS.AWAITING_INPUT);
-  }
+  };
 
   useEffect(() => {
     if (status === APP_STATUS.AWAITING_INPUT) return;
@@ -331,9 +330,15 @@ export default function Home() {
         >
           <Center>
             <Steps activeStep={activeStep}>
-              <Step label="Step 1" description="This is the first step" />
-              <Step label="Step 2" description="This is the second step" />
-              <Step label="Step 3" description="This is the third step" />
+              <Step
+                label="Prepayment"
+                description="Make a prepayment to initialize the contract"
+              />
+              <Step
+                label="Sketch"
+                description="Show the progress of your work"
+              />
+              <Step label="Final Product" description="Contract completion" />
             </Steps>
           </Center>
         </Box>
@@ -354,49 +359,44 @@ export default function Home() {
             <form onSubmit={handleSubmit}>
               <VStack spacing={"20px"} alignItems={"start"}>
                 <ConnectButton chainStatus="none" showBalance={false} />
-                <Box>
-                  <Box>Amount *</Box>
+                <Box w={"full"}>
+                  <Box>Amount</Box>
                   <Input
                     type="number"
                     name="expected-amount"
                     step="any"
                     onChange={(e) => setExpectedAmount(e.target.value)}
-                    className={styles.h9_w96}
                   />
                 </Box>
-                <Box>
+                <Box w={"full"}>
                   <Box>Payment Recipient</Box>
                   <Input
                     type="text"
                     name="payment-recipient"
                     placeholder={address}
                     onChange={(e) => setPaymentRecipient(e.target.value)}
-                    className={styles.h9_w96}
                   />
                 </Box>
-                <Box>
+                <Box w={"full"}>
                   <Box>Payer Identity</Box>
                   <Input
                     type="text"
                     name="payer-identity"
                     placeholder="0x..."
                     onChange={(e) => setPayerIdentity(e.target.value)}
-                    className={styles.h9_w96}
                   />
                 </Box>
-                <Box>
+                <Box w={"full"}>
                   <Box>Due Date</Box>
                   <Input
                     type="date"
                     name="due-date"
                     onChange={(e) => setDueDate(e.target.value)}
-                    className={styles.h9_w96}
                   />
                 </Box>
                 <Button
                   type="submit"
-                  isDisabled={!canSubmit()}
-                  className={styles.h9_w24}
+                  isDisabled={!canSubmit}
                   background={"blue.400"}
                   color={"white"}
                   shadow={"sm"}
@@ -423,6 +423,7 @@ export default function Home() {
                 shadow={"sm"}
                 background={"blue.400"}
                 color={"white"}
+                isLoading={isSwitchNetworkLoading}
                 isDisabled={
                   !switchNetwork ||
                   !requestData ||
@@ -436,7 +437,7 @@ export default function Home() {
                     )?.id
                   )
                 }
-                className={styles.h9_w96}
+                w={"380px"}
               >
                 Switch to Payment Chain: {requestData?.currencyInfo.network}
                 {isSwitchNetworkLoading && " (switching)"}
@@ -446,9 +447,9 @@ export default function Home() {
                 background={"blue.400"}
                 color={"white"}
                 type="button"
-                isDisabled={!canApprove()}
+                isDisabled={!canApprove}
                 onClick={handleApprove}
-                className={styles.h9_w24}
+                w={"380px"}
               >
                 Approve
               </Button>
@@ -458,9 +459,9 @@ export default function Home() {
                 background={"blue.400"}
                 color={"white"}
                 type="button"
-                onClick={handlePay}
-                isDisabled={!canPay()}
-                className={styles.h9_w24}
+                onClick={handlePayment}
+                // isDisabled={!canPayRequest}
+                w={"380px"}
               >
                 Pay now
               </Button>
@@ -481,10 +482,15 @@ export default function Home() {
             <Center mb={"30px"} color={"gray.700"}>
               <Heading>Designer</Heading>
             </Center>
-            <VStack>
+            <VStack align={"start"}>
+              <Box></Box>
               <Box>Screenshot URL</Box>
-              <Input />
-              <Box>Demo URL</Box>
+              {imageURL && <Image alt="" src={imageURL} />}
+              <Input
+                onChange={(e) => setImageURL(e.target.value)}
+                value={imageURL ?? ""}
+              />
+              <Box mt={"20px"}>Demo URL</Box>
               <Input />
               <Flex
                 w={"full"}
@@ -498,6 +504,7 @@ export default function Home() {
                   </Box>
                 ) : (
                   <Button
+                    mt={"20px"}
                     shadow={"sm"}
                     background={"blue.400"}
                     color={"white"}
@@ -519,43 +526,39 @@ export default function Home() {
             <form onSubmit={handleSubmit}>
               <VStack spacing={"20px"} alignItems={"start"}>
                 <ConnectButton chainStatus="none" showBalance={false} />
-                <Box>
-                  <Box>Amount *</Box>
+                <Box w={"full"}>
+                  <Box>Amount</Box>
                   <Input
                     type="number"
                     name="expected-amount"
                     step="any"
                     onChange={(e) => setExpectedAmount(e.target.value)}
-                    className={styles.h9_w96}
                   />
                 </Box>
-                <Box>
+                <Box w={"full"}>
                   <Box>Payment Recipient</Box>
                   <Input
                     type="text"
                     name="payment-recipient"
                     placeholder={address}
                     onChange={(e) => setPaymentRecipient(e.target.value)}
-                    className={styles.h9_w96}
                   />
                 </Box>
-                <Box>
+                <Box w={"full"}>
                   <Box>Payer Identity</Box>
                   <Input
                     type="text"
                     name="payer-identity"
                     placeholder="0x..."
                     onChange={(e) => setPayerIdentity(e.target.value)}
-                    className={styles.h9_w96}
                   />
                 </Box>
-                <Box>
+                <Box w={"full"}>
                   <Box>Due Date</Box>
                   <Input
                     type="date"
                     name="due-date"
                     onChange={(e) => setDueDate(e.target.value)}
-                    className={styles.h9_w96}
                   />
                 </Box>
                 <Button
@@ -563,8 +566,7 @@ export default function Home() {
                   background={"blue.400"}
                   color={"white"}
                   type="submit"
-                  isDisabled={!canSubmit()}
-                  className={styles.h9_w24}
+                  isDisabled={!canSubmit}
                 >
                   Submit
                 </Button>
@@ -620,6 +622,7 @@ export default function Home() {
                 shadow={"sm"}
                 background={"blue.400"}
                 color={"white"}
+                w={"380px"}
                 isDisabled={
                   !switchNetwork ||
                   !requestData ||
@@ -633,7 +636,6 @@ export default function Home() {
                     )?.id
                   )
                 }
-                className={styles.h9_w96}
               >
                 Switch to Payment Chain: {requestData?.currencyInfo.network}
                 {isSwitchNetworkLoading && " (switching)"}
@@ -643,54 +645,53 @@ export default function Home() {
                 background={"blue.400"}
                 color={"white"}
                 type="button"
-                isDisabled={!canApprove()}
+                isDisabled={!canApprove}
                 onClick={handleApprove}
-                className={styles.h9_w24}
+                w={"380px"}
               >
                 Approve
               </Button>
-              {!switchNetwork && (
-                <Box>Programmatic switch network not supported by wallet.</Box>
-              )}
-              <Box>{error && error.message}</Box>
+              {error && error.message && <Box>{error.message}</Box>}
               <Button
                 shadow={"sm"}
                 background={"blue.400"}
                 color={"white"}
                 type="button"
-                onClick={handlePay}
-                isDisabled={!canPay()}
-                className={styles.h9_w24}
+                onClick={handlePayment}
+                // isDisabled={!canPayRequest}
+                w={"380px"}
               >
                 Pay now
               </Button>
-              <Box>Invoice status: {status}</Box>
             </VStack>
           </Box>
         </SimpleGrid>
       )}
       {activeStep === 2 && (
-        <Box
-          w={"full"}
-          p={"50px"}
-          py={"20px"}
-          height={"500px"}
-          position={"relative"}
-        >
-          <Flex
-            h={"full"}
-            background={"white"}
-            borderWidth={"1px"}
-            borderRadius={"20px"}
-            borderColor={"gray.400"}
-            shadow={"md"}
-            p={"30px"}
-            alignItems={"center"}
-            justifyContent={"center"}
+        <>
+          <Confetti numberOfPieces={600} />
+          <Box
+            w={"full"}
+            p={"50px"}
+            py={"20px"}
+            height={"500px"}
+            position={"relative"}
           >
-            <Box fontWeight={"bold"}>Completed!!!</Box>
-          </Flex>
-        </Box>
+            <Flex
+              h={"full"}
+              background={"white"}
+              borderWidth={"1px"}
+              borderRadius={"20px"}
+              borderColor={"gray.400"}
+              shadow={"md"}
+              p={"30px"}
+              alignItems={"center"}
+              justifyContent={"center"}
+            >
+              <Box fontWeight={"bold"}>Completed!!!</Box>
+            </Flex>
+          </Box>
+        </>
       )}
       <Box p={"50px"} pb={"20px"} pt={"20px"}>
         <Box
@@ -707,6 +708,7 @@ export default function Home() {
               shadow={"sm"}
               background={"blue.400"}
               color={"white"}
+              isDisabled={true}
               onClick={() => {
                 goToPrevious();
               }}
@@ -728,6 +730,7 @@ export default function Home() {
                 goToNext();
                 handleClear();
               }}
+              isDisabled={activeStep > 2}
             >
               Next step
             </Button>

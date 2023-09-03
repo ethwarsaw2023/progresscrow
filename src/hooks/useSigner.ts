@@ -11,11 +11,13 @@ export function walletClientToSigner(walletClient: WalletClient) {
   };
   const provider = new providers.Web3Provider(transport, network);
   const signer = provider.getSigner(account.address);
+
   return signer;
 }
 
 export function useSigner({ chainId }: { chainId?: number } = {}) {
   const { data: walletClient } = useWalletClient({ chainId });
+
   return useMemo(
     () => (walletClient ? walletClientToSigner(walletClient) : undefined),
     [walletClient]
