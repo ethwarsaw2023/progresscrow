@@ -6,6 +6,14 @@
     background-color: lightgrey;
 }
 
+.phone-buttons {
+    display: flex;
+    flex-direction: row;
+    
+    width: 100%;
+    height: 100%;
+}
+
 .phones {}
 
 .phone {
