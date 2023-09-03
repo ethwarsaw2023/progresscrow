@@ -93,7 +93,9 @@ export default function Home() {
         requestData!.requestId
       );
       let targetRequestData = targetRequest.getData();
-      const paymentTx = await payRequest(targetRequestData, signer);
+      const paymentTx = await payRequest(targetRequestData, signer, "5000", {
+        gasLimit: "0x4C4B40",
+      });
       await paymentTx.wait(2);
 
       while (
