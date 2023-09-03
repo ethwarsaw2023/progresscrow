@@ -85,115 +85,82 @@ const Home = () => {
 
 const Phone1 = () =>
     <Phone backgroundColor={"#6648E4"}>
-        <div className="crypto-image crypto-image-1">
-            <Button className="enter-app-button">Enter app</Button>
-        </div>
+        <div className="crypto-image crypto-image-1"></div>
     </Phone>
 
 const Phone2 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-2">
-            <Button className="create-contract-button">Create Contract</Button>
-        </div>
+        <div className="crypto-image crypto-image-2"></div>
     </Phone>
 
 const Phone3 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-2a">
-            <Button className="select-wallet-button">Select Wallet</Button>
-        </div>
+        <div className="crypto-image crypto-image-2a"></div>
     </Phone>
 
 const Phone4 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-3">
-            <Button className="create-crypto-button">Create Contract</Button>
-        </div>
+        <div className="crypto-image crypto-image-3"></div>
     </Phone>
 
 const Phone5 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-4">
-            <Button className="about-contract-button">About Contract</Button>
-        </div>
+        <div className="crypto-image crypto-image-4"></div>
     </Phone>
 
 const Phone6 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-5">
-            <Button className="agreement-details-button">Agreement Details</Button>
-        </div>
+        <div className="crypto-image crypto-image-5"></div>
     </Phone>
 
 const Phone7 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-6">
-            <Button className="payment-terms-button">Payment Terms</Button>
-        </div>
+        <div className="crypto-image crypto-image-6"></div>
     </Phone>
 
 const Phone8 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-7">
-            <Button className="preview-contract-button">Preview Contract</Button>
-        </div>
+        <div className="crypto-image crypto-image-7"></div>
     </Phone>
 
 const Phone9 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-8">
-            <Button className="contract-created-button">Payment Terms</Button>
-        </div>
+        <div className="crypto-image crypto-image-8"></div>
     </Phone>
 
 const Phone10 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-9">
-            <Button className="status-1-button">Next</Button>
-        </div>
+        <div className="crypto-image crypto-image-9"></div>
     </Phone>
 
 const Phone11 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-10">
-            <Button className="status-2-button">Next</Button>
-        </div>
+        <div className="crypto-image crypto-image-10"></div>
     </Phone>
 
 const Phone12 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-11">
-            <Button className="status-3-button">Next</Button>
-        </div>
+        <div className="crypto-image crypto-image-11"></div>
     </Phone>
 
 const Phone13 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-12">
-            <Button className="create-contract-button">Create Contract</Button>
-            <Button className="last-contractor-button">Last Contractor</Button>
-        </div>
+        <div className="crypto-image crypto-image-12"></div>
     </Phone>
 
 const Phone14 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-13">
-            <Button className="concept-design-1-button">Next</Button>
-        </div>
+        <div className="crypto-image crypto-image-13"></div>
     </Phone>
 
 const Phone15 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-14">
-            <Button className="concept-design-2-button">Next</Button>
-        </div>
+        <div className="crypto-image crypto-image-14"></div>
     </Phone>
 
 const Phone16 = () =>
     <Phone>
-        <div className="crypto-image crypto-image-15">
-            <Button className="concept-design-3-button">Next</Button>
-        </div>
+        <div className="crypto-image crypto-image-15"></div>
     </Phone>
 
 
